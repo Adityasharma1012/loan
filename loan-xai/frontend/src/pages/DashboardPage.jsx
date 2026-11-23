@@ -79,8 +79,19 @@ export default function DashboardPage({ setCurrentPage, setSelectedAppId }) {
     );
   }
 
-  const decisionData = stats?.decision_distribution || [];
-  const riskData = stats?.risk_distribution || [];
+  const decisionData = Array.isArray(stats?.decision_distribution)
+    ? stats.decision_distribution
+    : [];
+
+  const riskData = Array.isArray(stats?.risk_distribution)
+    ? stats.risk_distribution
+    : (stats?.risk_distribution && typeof stats.risk_distribution === "object"
+        ? [
+            { tier: "Low Risk", count: stats.risk_distribution.LOW || 0, color: "#2563EB" },
+            { tier: "Medium Risk", count: stats.risk_distribution.MEDIUM || 0, color: "#F59E0B" },
+            { tier: "High Risk", count: stats.risk_distribution.HIGH || 0, color: "#EF4444" },
+          ]
+        : []);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">

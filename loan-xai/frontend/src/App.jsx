@@ -14,6 +14,36 @@ import HistoryPage from "./pages/HistoryPage";
 import AuditReportPage from "./pages/AuditReportPage";
 import AboutPage from "./pages/AboutPage";
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 max-w-xl mx-auto my-12 bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800 rounded-2xl shadow-sm text-center">
+          <h3 className="text-lg font-bold text-rose-600 mb-2">Something went wrong rendering this view</h3>
+          <p className="text-xs text-slate-500 mb-4">{this.state.error?.message || "Unknown rendering exception"}</p>
+          <button
+            onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+            className="px-4 py-2 bg-finblue-600 hover:bg-finblue-500 text-white rounded-lg text-xs font-semibold"
+          >
+            Reload Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -106,7 +136,9 @@ export default function App() {
 
         {/* Page Content Viewport */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          {renderCurrentPage()}
+          <ErrorBoundary>
+            {renderCurrentPage()}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

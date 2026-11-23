@@ -319,7 +319,16 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
             "approval_rate_percent": 0.0,
             "average_requested_amount": 0.0,
             "average_recommended_amount": 0.0,
-            "risk_distribution": {"LOW": 0, "MEDIUM": 0, "HIGH": 0},
+            "decision_distribution": [
+                {"name": "Eligible", "value": 0, "color": "#16A34A"},
+                {"name": "Conditional", "value": 0, "color": "#CA8A04"},
+                {"name": "Not Eligible", "value": 0, "color": "#DC2626"},
+            ],
+            "risk_distribution": [
+                {"tier": "Low Risk", "count": 0, "color": "#2563EB"},
+                {"tier": "Medium Risk", "count": 0, "color": "#F59E0B"},
+                {"tier": "High Risk", "count": 0, "color": "#EF4444"},
+            ],
             "recent_applications": [],
         }
 
