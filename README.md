@@ -2,6 +2,15 @@
 **Course**: Artificial Intelligence Foundations  
 **Academic Demonstration**: *Rates and amounts are illustrative, not bank offers. Approval is never guaranteed. Synthetic data only.*
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+&nbsp;
+[![Tests](https://img.shields.io/badge/pytest-37%20passed-success?logo=pytest)](file:///c:/bava/loan-xai/tests.png)
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.13-blue?logo=python)](file:///c:/bava/loan-xai/backend/requirements.txt)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](file:///c:/bava/loan-xai/frontend/package.json)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)](file:///c:/bava/loan-xai/backend/app/main.py)
+
+> 🚀 **Ready to Deploy on Render:** See [`DEPLOY_RENDER.md`](./DEPLOY_RENDER.md) for 1-click Render Blueprint and Docker deployment instructions.
+
 ---
 
 ## 1. Project Statement & Objectives

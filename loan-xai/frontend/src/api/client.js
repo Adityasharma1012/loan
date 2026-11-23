@@ -1,4 +1,11 @@
-const API_BASE = "http://127.0.0.1:8000/api";
+// Dynamic API base resolution:
+// 1. If VITE_API_URL is configured (e.g. Render production URL), use it.
+// 2. In Vite development mode, default to local backend on http://127.0.0.1:8000/api.
+// 3. In production with unified serving / reverse proxy, default to /api.
+const rawApiUrl = import.meta.env.VITE_API_URL;
+const API_BASE = rawApiUrl
+  ? `${rawApiUrl.replace(/\/$/, "")}/api`
+  : (import.meta.env.DEV ? "http://127.0.0.1:8000/api" : "/api");
 
 export async function evaluateApplication(payload) {
   const res = await fetch(`${API_BASE}/evaluate`, {
