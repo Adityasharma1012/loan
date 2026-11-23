@@ -1,0 +1,53 @@
+version: "1.0.0"
+currency: "INR"
+currency_symbol: "₹"
+
+eligibility:
+  min_legal_age: 18
+  min_income_eligible: 30000.0
+  min_income_absolute: 0.01
+  max_dti_eligible: 0.40
+  max_dti_conditional: 0.50
+  min_credit_score_eligible: 750
+  min_credit_score_conditional: 650
+  min_credit_score_hard_knockout: 550
+  min_employment_years_eligible: 2.0
+  acceptable_repayment_eligible:
+    - "Good"
+    - "Excellent"
+  acceptable_repayment_conditional:
+    - "Fair"
+    - "Good"
+    - "Excellent"
+
+affordability:
+  max_emi_income_multiplier: 0.40
+  max_income_loan_multiplier: 36.0
+  conditional_amount_multiplier: 0.70
+
+interest_rate_bands:
+  LOW:
+    base_rate: 0.095
+    min_rate: 0.090
+    max_rate: 0.110
+    label: "Low Risk Tier (9.0% - 11.0%)"
+  MEDIUM:
+    base_rate: 0.125
+    min_rate: 0.110
+    max_rate: 0.140
+    label: "Medium Risk Tier (11.0% - 14.0%)"
+  HIGH:
+    base_rate: 0.155
+    min_rate: 0.140
+    max_rate: 0.180
+    label: "High Risk Tier (14.0% - 18.0%)"
+  VERY_HIGH:
+    base_rate: 0.180
+    min_rate: 0.180
+    max_rate: 0.220
+    label: "Extreme Risk Tier (Not Approved)"
+
+tenure_constraints:
+  min_tenure_months: 6
+  max_tenure_months: 84
+  conditional_max_tenure_months: 36

@@ -1,0 +1,414 @@
+version: "1.0.0"
+rules:
+  # ---------------------------------------------------------
+  # HARD KNOCK-OUT RULES (Highest Priority: 100)
+  # ---------------------------------------------------------
+  - id: "HKO_001"
+    name: "Legal Age Capacity Knock-Out"
+    rule_type: "hard_knockout"
+    priority: 100
+    conditions:
+      - predicate: "AgeLessThan"
+        args: ["x", 18]
+    actions:
+      - assert: "HardKnockout"
+        args: ["x", "Applicant is below legal contracting age of 18 years"]
+      - assert: "NotEligibleReason"
+        args: ["x", "Under legal age (minimum 18 years required)"]
+    fol_form: "forall x: Applicant(x) ^ AgeLessThan(x, 18) -> HardKnockout(x, UnderLegalAge)"
+    plain_english: "Applicants under 18 years of age do not possess legal contracting capacity for loan agreements."
+
+  - id: "HKO_002"
+    name: "Non-Positive Income Knock-Out"
+    rule_type: "hard_knockout"
+    priority: 100
+    conditions:
+      - predicate: "MonthlyIncomeAtMost"
+        args: ["x", 0.0]
+    actions:
+      - assert: "HardKnockout"
+        args: ["x", "Verified monthly income must be strictly greater than zero"]
+      - assert: "NotEligibleReason"
+        args: ["x", "Monthly income is non-positive"]
+    fol_form: "forall x: Applicant(x) ^ MonthlyIncomeAtMost(x, 0) -> HardKnockout(x, ZeroOrNegativeIncome)"
+    plain_english: "Applicants with zero or negative verified income cannot service credit debt."
+
+  - id: "HKO_003"
+    name: "Severe Credit Impairment Knock-Out"
+    rule_type: "hard_knockout"
+    priority: 100
+    conditions:
+      - predicate: "CreditScoreLessThan"
+        args: ["x", 550]
+    actions:
+      - assert: "HardKnockout"
+        args: ["x", "Credit score below minimum underwriting floor of 550"]
+      - assert: "NotEligibleReason"
+        args: ["x", "Credit score is below 550 minimum cutoff"]
+    fol_form: "forall x: Applicant(x) ^ CreditScoreLessThan(x, 550) -> HardKnockout(x, SevereCreditImpairment)"
+    plain_english: "Credit score below 550 indicates severe past delinquency or charge-offs, representing unacceptable loss risk."
+
+  - id: "HKO_004"
+    name: "Recent Default Knock-Out"
+    rule_type: "hard_knockout"
+    priority: 100
+    conditions:
+      - predicate: "RecentDefaultOnRecord"
+        args: ["x"]
+    actions:
+      - assert: "HardKnockout"
+        args: ["x", "Active or recent default registered within past 24 months"]
+      - assert: "NotEligibleReason"
+        args: ["x", "Recent default history on active or closed credit lines"]
+    fol_form: "forall x: Applicant(x) ^ RecentDefaultOnRecord(x) -> HardKnockout(x, ActiveDefaultRecord)"
+    plain_english: "Recent default on record indicates active credit delinquency and disqualifies uncollateralized lending."
+
+  # ---------------------------------------------------------
+  # DERIVATION RULES - LAYER 1: Core Financial Attributes (Priority: 70-80)
+  # ---------------------------------------------------------
+  - id: "DER_INC_01"
+    name: "Derive Income Benchmark Qualified"
+    rule_type: "derivation"
+    priority: 80
+    conditions:
+      - predicate: "MonthlyIncomeAtLeast"
+        args: ["x", 30000.0]
+    actions:
+      - assert: "IncomeSufficient"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ MonthlyIncomeAtLeast(x, 30000) -> IncomeSufficient(x)"
+    plain_english: "Monthly income satisfies prime lending baseline of INR 30,000."
+
+  - id: "DER_INC_02"
+    name: "Derive Income Marginal Qualified"
+    rule_type: "derivation"
+    priority: 75
+    conditions:
+      - predicate: "MonthlyIncomeBetween"
+        args: ["x", 20000.0, 30000.0]
+    actions:
+      - assert: "IncomeMarginal"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ MonthlyIncomeBetween(x, 20000, 30000) -> IncomeMarginal(x)"
+    plain_english: "Monthly income is between INR 20,000 and 30,000, qualifying for conditional review only."
+
+  - id: "DER_INC_03"
+    name: "Derive Income Inadequate"
+    rule_type: "derivation"
+    priority: 75
+    conditions:
+      - predicate: "MonthlyIncomeBetween"
+        args: ["x", 0.01, 20000.0]
+    actions:
+      - assert: "IncomeInadequate"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ MonthlyIncomeBetween(x, 0.01, 20000) -> IncomeInadequate(x)"
+    plain_english: "Monthly income is below INR 20,000, insufficient for unsecured debt servicing."
+
+  - id: "DER_DTI_01"
+    name: "Derive Prime DTI"
+    rule_type: "derivation"
+    priority: 80
+    conditions:
+      - predicate: "DTIAtMost"
+        args: ["x", 0.40]
+    actions:
+      - assert: "DTIOK"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ DTIAtMost(x, 0.40) -> DTIOK(x)"
+    plain_english: "Debt-to-Income ratio is 40% or lower, indicating sound debt service headroom."
+
+  - id: "DER_DTI_02"
+    name: "Derive Marginal DTI"
+    rule_type: "derivation"
+    priority: 75
+    conditions:
+      - predicate: "DTIBetween"
+        args: ["x", 0.40, 0.50]
+    actions:
+      - assert: "DTIMarginal"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ DTIBetween(x, 0.40, 0.50) -> DTIMarginal(x)"
+    plain_english: "Debt-to-Income ratio is between 40% and 50%, elevated but manageable under stricter covenants."
+
+  - id: "DER_DTI_03"
+    name: "Derive Excessive DTI"
+    rule_type: "derivation"
+    priority: 75
+    conditions:
+      - predicate: "DTIGreaterThan"
+        args: ["x", 0.50]
+    actions:
+      - assert: "DTIExcessive"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ DTIGreaterThan(x, 0.50) -> DTIExcessive(x)"
+    plain_english: "Debt-to-Income ratio exceeds 50%, indicating high debt distress vulnerability."
+
+  - id: "DER_CS_01"
+    name: "Derive Prime Credit Score"
+    rule_type: "derivation"
+    priority: 80
+    conditions:
+      - predicate: "CreditScoreAtLeast"
+        args: ["x", 750]
+    actions:
+      - assert: "CreditPrime"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ CreditScoreAtLeast(x, 750) -> CreditPrime(x)"
+    plain_english: "Credit score is 750 or higher, reflecting established credit discipline."
+
+  - id: "DER_CS_02"
+    name: "Derive Near-Prime Credit Score"
+    rule_type: "derivation"
+    priority: 75
+    conditions:
+      - predicate: "CreditScoreBetween"
+        args: ["x", 650, 749]
+    actions:
+      - assert: "CreditNearPrime"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ CreditScoreBetween(x, 650, 749) -> CreditNearPrime(x)"
+    plain_english: "Credit score is between 650 and 749, demonstrating acceptable but moderate credit risk."
+
+  - id: "DER_CS_03"
+    name: "Derive Subprime Credit Score"
+    rule_type: "derivation"
+    priority: 75
+    conditions:
+      - predicate: "CreditScoreBetween"
+        args: ["x", 550, 649]
+    actions:
+      - assert: "CreditSubprime"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ CreditScoreBetween(x, 550, 649) -> CreditSubprime(x)"
+    plain_english: "Credit score is between 550 and 649, reflecting notable delinquency risk."
+
+  - id: "DER_EMP_01"
+    name: "Derive Stable Employment"
+    rule_type: "derivation"
+    priority: 80
+    conditions:
+      - predicate: "EmploymentYearsAtLeast"
+        args: ["x", 2.0]
+    actions:
+      - assert: "EmploymentStable"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ EmploymentYearsAtLeast(x, 2.0) -> EmploymentStable(x)"
+    plain_english: "Applicant has maintained continuous employment tenure of at least 2 years."
+
+  - id: "DER_EMP_02"
+    name: "Derive Short Employment"
+    rule_type: "derivation"
+    priority: 75
+    conditions:
+      - predicate: "EmploymentYearsLessThan"
+        args: ["x", 2.0]
+    actions:
+      - assert: "EmploymentShort"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ EmploymentYearsLessThan(x, 2.0) -> EmploymentShort(x)"
+    plain_english: "Applicant has less than 2 years of continuous employment history."
+
+  - id: "DER_REP_01"
+    name: "Derive Positive Repayment History"
+    rule_type: "derivation"
+    priority: 80
+    conditions:
+      - predicate: "RepaymentHistoryIn"
+        args: ["x", ["Good", "Excellent"]]
+    actions:
+      - assert: "RepaymentPositive"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ RepaymentHistoryPositive(x) -> RepaymentPositive(x)"
+    plain_english: "Applicant has demonstrated consistent, on-time historical debt service behavior."
+
+  - id: "DER_REP_02"
+    name: "Derive Fair Repayment History"
+    rule_type: "derivation"
+    priority: 75
+    conditions:
+      - predicate: "RepaymentHistoryIs"
+        args: ["x", "Fair"]
+    actions:
+      - assert: "RepaymentFair"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ RepaymentHistoryIs(x, Fair) -> RepaymentFair(x)"
+    plain_english: "Applicant history displays occasional minor past delays, without active default."
+
+  - id: "DER_REP_03"
+    name: "Derive Poor Repayment History"
+    rule_type: "derivation"
+    priority: 75
+    conditions:
+      - predicate: "RepaymentHistoryIs"
+        args: ["x", "Poor"]
+    actions:
+      - assert: "RepaymentPoor"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ RepaymentHistoryIs(x, Poor) -> RepaymentPoor(x)"
+    plain_english: "Applicant has frequent late payments or severe delinquencies on record."
+
+  - id: "DER_AFF_01"
+    name: "Derive Requested EMI Affordable"
+    rule_type: "derivation"
+    priority: 70
+    conditions:
+      - predicate: "RequestedEMILessThanMaxEMI"
+        args: ["x"]
+    actions:
+      - assert: "EMIAffordable"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ RequestedEMILessThanMaxEMI(x) -> EMIAffordable(x)"
+    plain_english: "The estimated monthly installment for requested principal fits within uncommitted cashflow."
+
+  - id: "DER_AFF_02"
+    name: "Derive Requested EMI Unaffordable"
+    rule_type: "derivation"
+    priority: 70
+    conditions:
+      - predicate: "RequestedEMIGreaterThanMaxEMI"
+        args: ["x"]
+    actions:
+      - assert: "EMIUnaffordable"
+        args: ["x"]
+    fol_form: "forall x: Applicant(x) ^ RequestedEMIGreaterThanMaxEMI(x) -> EMIUnaffordable(x)"
+    plain_english: "The monthly installment for requested principal exceeds the permissible 40% disposable debt ceiling."
+
+  # ---------------------------------------------------------
+  # DERIVATION RULES - LAYER 2: Risk Class Derivation (Priority: 50-60)
+  # ---------------------------------------------------------
+  - id: "RSK_001"
+    name: "Derive Low Risk Tier"
+    rule_type: "derivation"
+    priority: 60
+    conditions:
+      - predicate: "CreditPrime"
+        args: ["x"]
+      - predicate: "DTIOK"
+        args: ["x"]
+      - predicate: "EmploymentStable"
+        args: ["x"]
+      - predicate: "RepaymentPositive"
+        args: ["x"]
+      - predicate: "IncomeSufficient"
+        args: ["x"]
+    actions:
+      - assert: "RiskLevel"
+        args: ["x", "LOW"]
+    fol_form: "forall x: CreditPrime(x) ^ DTIOK(x) ^ EmploymentStable(x) ^ RepaymentPositive(x) ^ IncomeSufficient(x) -> RiskLevel(x, LOW)"
+    plain_english: "Prime credit, conservative leverage, seasoned employment, and exemplary repayment classify applicant as Low Risk."
+
+  - id: "RSK_002"
+    name: "Derive Medium Risk Tier"
+    rule_type: "derivation"
+    priority: 55
+    conditions:
+      - predicate: "NOT_HAS"
+        args: ["RiskLevel", "x", "LOW"]
+      - predicate: "NOT_HAS"
+        args: ["CreditSubprime", "x"]
+      - predicate: "NOT_HAS"
+        args: ["DTIExcessive", "x"]
+      - predicate: "NOT_HAS"
+        args: ["RepaymentPoor", "x"]
+      - predicate: "NOT_HAS"
+        args: ["IncomeInadequate", "x"]
+    actions:
+      - assert: "RiskLevel"
+        args: ["x", "MEDIUM"]
+    fol_form: "forall x: ~RiskLevel(x, LOW) ^ ~CreditSubprime(x) ^ ~DTIExcessive(x) ^ ~RepaymentPoor(x) ^ ~IncomeInadequate(x) -> RiskLevel(x, MEDIUM)"
+    plain_english: "Applicant possesses moderate creditworthiness with near-prime score or marginal DTI/employment, qualifying as Medium Risk."
+
+  - id: "RSK_003"
+    name: "Derive High Risk Tier"
+    rule_type: "derivation"
+    priority: 50
+    conditions:
+      - predicate: "NOT_HAS"
+        args: ["RiskLevel", "x", "LOW"]
+      - predicate: "NOT_HAS"
+        args: ["RiskLevel", "x", "MEDIUM"]
+    actions:
+      - assert: "RiskLevel"
+        args: ["x", "HIGH"]
+    fol_form: "forall x: ~RiskLevel(x, LOW) ^ ~RiskLevel(x, MEDIUM) -> RiskLevel(x, HIGH)"
+    plain_english: "Elevated leverage, subprime score, or adverse repayment marks place applicant into High Risk."
+
+  # ---------------------------------------------------------
+  # DECISION RULES - LAYER 3: Core Eligibility Decisions (Priority: 20-30)
+  # ---------------------------------------------------------
+  - id: "DEC_001"
+    name: "Hard Knock-Out Decision Rule"
+    rule_type: "decision"
+    priority: 40
+    conditions:
+      - predicate: "HAS"
+        args: ["HardKnockout", "x"]
+    actions:
+      - assert: "FinalDecision"
+        args: ["x", "NOT_ELIGIBLE"]
+    fol_form: "forall x: HardKnockout(x, reason) -> FinalDecision(x, NOT_ELIGIBLE)"
+    plain_english: "One or more statutory or prudential hard knock-outs triggered immediate decline."
+
+  - id: "DEC_002"
+    name: "Full Eligibility Decision Rule"
+    rule_type: "decision"
+    priority: 30
+    conditions:
+      - predicate: "NOT_HAS"
+        args: ["FinalDecision", "x"]
+      - predicate: "NOT_HAS"
+        args: ["HardKnockout", "x"]
+      - predicate: "IncomeSufficient"
+        args: ["x"]
+      - predicate: "CreditPrime"
+        args: ["x"]
+      - predicate: "DTIOK"
+        args: ["x"]
+      - predicate: "EmploymentStable"
+        args: ["x"]
+      - predicate: "RepaymentPositive"
+        args: ["x"]
+    actions:
+      - assert: "FinalDecision"
+        args: ["x", "ELIGIBLE"]
+    fol_form: "forall x: ~HardKnockout(x, r) ^ IncomeSufficient(x) ^ CreditPrime(x) ^ DTIOK(x) ^ EmploymentStable(x) ^ RepaymentPositive(x) -> FinalDecision(x, ELIGIBLE)"
+    plain_english: "All baseline eligibility criteria met: income >= 30,000, credit >= 750, DTI <= 40%, employment >= 2 years, positive repayment."
+
+  - id: "DEC_003"
+    name: "Conditional Eligibility Decision Rule"
+    rule_type: "decision"
+    priority: 25
+    conditions:
+      - predicate: "NOT_HAS"
+        args: ["HardKnockout", "x"]
+      - predicate: "NOT_HAS"
+        args: ["FinalDecision", "x", "ELIGIBLE"]
+      - predicate: "NOT_HAS"
+        args: ["CreditScoreLessThan", "x", 650]
+      - predicate: "NOT_HAS"
+        args: ["DTIExcessive", "x"]
+      - predicate: "NOT_HAS"
+        args: ["IncomeInadequate", "x"]
+      - predicate: "NOT_HAS"
+        args: ["RepaymentPoor", "x"]
+    actions:
+      - assert: "FinalDecision"
+        args: ["x", "CONDITIONALLY_ELIGIBLE"]
+    fol_form: "forall x: ~HardKnockout(x) ^ ~FinalDecision(x, ELIGIBLE) ^ CreditScoreAtLeast(x, 650) ^ DTIAtMost(x, 0.50) ^ MonthlyIncomeAtLeast(x, 20000) ^ ~RepaymentPoor(x) -> FinalDecision(x, CONDITIONALLY_ELIGIBLE)"
+    plain_english: "Core criteria mostly met with soft failures (e.g. credit 650-749, DTI 40-50%, or employment < 2 yrs). Approved subject to conditional covenants."
+
+  - id: "DEC_004"
+    name: "Default Non-Eligibility Fallback Rule"
+    rule_type: "decision"
+    priority: 20
+    conditions:
+      - predicate: "NOT_HAS"
+        args: ["FinalDecision", "x", "ELIGIBLE"]
+      - predicate: "NOT_HAS"
+        args: ["FinalDecision", "x", "CONDITIONALLY_ELIGIBLE"]
+    actions:
+      - assert: "FinalDecision"
+        args: ["x", "NOT_ELIGIBLE"]
+    fol_form: "forall x: ~FinalDecision(x, ELIGIBLE) ^ ~FinalDecision(x, CONDITIONALLY_ELIGIBLE) -> FinalDecision(x, NOT_ELIGIBLE)"
+    plain_english: "Applicant profile falls outside both prime approval and conditional mitigation envelopes."
